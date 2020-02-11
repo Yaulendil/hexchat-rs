@@ -1,4 +1,3 @@
-use std::boxed::FnBox;
 use std::ops::Deref;
 
 use parking_lot::{Once, OnceState, RwLock};
@@ -172,7 +171,7 @@ impl<T> Deref for SafeUninit<T> {
         if state != OnceState::Done {
             panic!("Uninitialized `SafeUninit`");
         }
-        unsafe { (&*self.instance.get()) }.as_ref().unwrap()
+        unsafe { &*self.instance.get() }.as_ref().unwrap()
     }
 }
 
@@ -181,6 +180,6 @@ pub(crate) static EXITING: AtomicBool = AtomicBool::new(false);
 unsafe impl<T> Sync for SafeUninit<T> where T: Send + Sync {}
 
 pub(crate) static ALLOCATED: RwLock<Option<Vec<Deallocator>>> = RwLock::new(None);
-pub(crate) struct Deallocator(pub(crate) Box<dyn FnBox()>);
+pub(crate) struct Deallocator(pub(crate) Box<dyn FnOnce()>);
 unsafe impl Send for Deallocator {}
 unsafe impl Sync for Deallocator {}

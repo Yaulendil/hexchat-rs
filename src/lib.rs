@@ -29,7 +29,6 @@
     trait_alias,
     type_alias_enum_variants,
     never_type,
-    fnbox,
     proc_macro_hygiene,
     try_from
 )]

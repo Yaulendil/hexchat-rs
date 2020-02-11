@@ -85,7 +85,7 @@ macro_rules! rpl {
                 let $word = word.offset(4);
                 let $word_eol = word_eol.offset(4);
                 $(
-                $s;
+                $s
                 )*
                 $(
                 let $name = $parser;

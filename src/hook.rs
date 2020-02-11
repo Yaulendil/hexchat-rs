@@ -212,7 +212,7 @@ pub(crate) fn dealloc_window_event_listener(listener: *mut c::hexchat_hook) {
 pub fn add_raw_server_event_listener(
     event: &str,
     priority: Priority,
-    function: impl Fn(&[String], DateTime<Utc>) -> EatMode + 'static,
+    function: impl Fn(&[String], DateTime<Utc>, String) -> EatMode + 'static,
 ) -> RawServerEventListener {
     let server_ref = ServerHookRef {
         function: Box::new(function),
@@ -307,7 +307,7 @@ where
     T: ServerEvent,
 {
     let server_ref = TypedServerHookRef {
-        function: Box::new(move |w, l, d| unsafe {
+        function: Box::new(move |w, l, d, _s| unsafe {
             let t = T::create(w, l);
             function(t, d)
         }),
@@ -361,7 +361,7 @@ where
     T: ServerReply,
 {
     let server_ref = TypedServerHookRef {
-        function: Box::new(move |w, l, d| unsafe {
+        function: Box::new(move |w, l, d, _s| unsafe {
             let t = T::create(w, l);
             if let Some(t) = t {
                 function(t, d)
@@ -443,7 +443,7 @@ struct ContextHookRef {
 }
 
 struct ServerHookRef {
-    function: Box<dyn Fn(&[String], DateTime<Utc>) -> EatMode>,
+    function: Box<dyn Fn(&[String], DateTime<Utc>, String) -> EatMode>,
 }
 
 struct TimerHookRef {
@@ -451,7 +451,7 @@ struct TimerHookRef {
 }
 
 struct TypedServerHookRef {
-    function: Box<dyn Fn(*mut *mut c_char, *mut *mut c_char, DateTime<Utc>) -> EatMode>,
+    function: Box<dyn Fn(*mut *mut c_char, *mut *mut c_char, DateTime<Utc>, String) -> EatMode>,
 }
 
 unsafe extern "C" fn command_hook(
@@ -535,7 +535,8 @@ unsafe extern "C" fn server_hook(
     }
     let naive = NaiveDateTime::from_timestamp((*attrs).server_time_utc as _, 0);
     let utc = Utc.from_utc_datetime(&naive);
-    panic::catch_unwind(AssertUnwindSafe(|| ((*user_data).function)(&vec, utc)))
+    let raw = from_cstring((*attrs).ircv3_line);
+    panic::catch_unwind(AssertUnwindSafe(|| ((*user_data).function)(&vec, utc, raw)))
         .unwrap_or(EatMode::None) as _
 }
 
@@ -557,8 +558,9 @@ unsafe extern "C" fn server_event_hook(
     let user_data = user_data as *mut TypedServerHookRef;
     let naive = NaiveDateTime::from_timestamp((*attrs).server_time_utc as _, 0);
     let utc = Utc.from_utc_datetime(&naive);
+    let raw = from_cstring((*attrs).ircv3_line);
     panic::catch_unwind(AssertUnwindSafe(|| {
-        ((*user_data).function)(word, word_eol, utc) as c_int
+        ((*user_data).function)(word, word_eol, utc, raw) as c_int
     }))
     .unwrap_or(EatMode::None as c_int)
 }

@@ -14,6 +14,7 @@ pub struct hexchat_list(!);
 #[repr(C)]
 pub struct hexchat_event_attrs {
     pub server_time_utc: time_t,
+    pub ircv3_line: *const c_char,
 }
 
 #[macro_export]
