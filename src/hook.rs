@@ -3,7 +3,7 @@
 use crate::call;
 use crate::reply::ServerReply;
 use crate::server_event::ServerEvent;
-use crate::{c, from_cstring, to_cstring, ChannelRef, PrintEvent, WindowEvent};
+use crate::{c, from_cstring, from_cstring_opt, to_cstring, ChannelRef, PrintEvent, WindowEvent};
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use std::ffi::c_void;
 use std::os::raw::{c_char, c_int};
@@ -535,7 +535,7 @@ unsafe extern "C" fn server_hook(
     }
     let naive = NaiveDateTime::from_timestamp((*attrs).server_time_utc as _, 0);
     let utc = Utc.from_utc_datetime(&naive);
-    let raw = from_cstring((*attrs).ircv3_line);
+    let raw = from_cstring_opt((*attrs).ircv3_line).unwrap_or_else(String::new);
     panic::catch_unwind(AssertUnwindSafe(|| ((*user_data).function)(&vec, utc, raw)))
         .unwrap_or(EatMode::None) as _
 }
@@ -558,7 +558,7 @@ unsafe extern "C" fn server_event_hook(
     let user_data = user_data as *mut TypedServerHookRef;
     let naive = NaiveDateTime::from_timestamp((*attrs).server_time_utc as _, 0);
     let utc = Utc.from_utc_datetime(&naive);
-    let raw = from_cstring((*attrs).ircv3_line);
+    let raw = from_cstring_opt((*attrs).ircv3_line).unwrap_or_else(String::new);
     panic::catch_unwind(AssertUnwindSafe(|| {
         ((*user_data).function)(word, word_eol, utc, raw) as c_int
     }))
