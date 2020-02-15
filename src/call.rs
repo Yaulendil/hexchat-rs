@@ -154,16 +154,20 @@ pub unsafe fn hexchat_plugin_deinit<T>(_plugin_handle: *mut c::hexchat_plugin) -
 where
     T: Plugin,
 {
-    let mut plugin = None;
     let mut instance = None;
-    let mut write = PLUGIN.write();
     let mut plugin_write = PLUGIN_INSTANCE.write();
-    mem::swap(&mut plugin, &mut *write);
+
+    //  Take the Value out of the Lock and immediately release it.
     mem::swap(&mut instance, &mut *plugin_write);
-    let plugin = match plugin {
-        Some(p) => p,
-        None => return 1,
-    };
+    mem::drop(plugin_write);
+    if let Some(i) = instance { mem::drop(i); } else { return -2; }
+
+    let mut plugin = None;
+    let mut write = PLUGIN.write();
+
+    //  Take the Value out of the Lock and immediately release it.
+    mem::swap(&mut plugin, &mut *write);
+    mem::drop(write);
     let PluginDef {
         server_events,
         window_events,
@@ -172,12 +176,11 @@ where
         timer_tasks,
         typed_server_events,
         ..
-    } = plugin;
-    let instance = match instance {
-        Some(i) => i,
-        None => return -2,
+    } = match plugin {
+        Some(p) => p,
+        None => return 1,
     };
-    mem::drop(instance);
+
     EXITING.store(false, Ordering::SeqCst);
     for event in server_events {
         crate::dealloc_raw_server_event_listener(event.0);
