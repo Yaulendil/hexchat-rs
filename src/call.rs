@@ -155,19 +155,19 @@ where
     T: Plugin,
 {
     let mut instance = None;
-    let mut plugin_write = PLUGIN_INSTANCE.write();
-
-    //  Take the Value out of the Lock and immediately release it.
-    mem::swap(&mut instance, &mut *plugin_write);
-    mem::drop(plugin_write);
+    {
+        //  Take the Value out of the Lock and immediately release it.
+        let mut plugin_write = PLUGIN_INSTANCE.write();
+        mem::swap(&mut instance, &mut *plugin_write);
+    }
     if let Some(i) = instance { mem::drop(i); } else { return -2; }
 
     let mut plugin = None;
-    let mut write = PLUGIN.write();
-
-    //  Take the Value out of the Lock and immediately release it.
-    mem::swap(&mut plugin, &mut *write);
-    mem::drop(write);
+    {
+        //  Take the Value out of the Lock and immediately release it.
+        let mut write = PLUGIN.write();
+        mem::swap(&mut plugin, &mut *write);
+    }
     let PluginDef {
         server_events,
         window_events,
